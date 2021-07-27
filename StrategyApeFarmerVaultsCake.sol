@@ -1091,7 +1091,7 @@ interface IXRouter02 is IXRouter01 {
     ) external;
 }
 
-contract StrategyParrotVaults is Ownable, ReentrancyGuard, Pausable {
+contract StrategyApeFarmerVaultsCake is Ownable, ReentrancyGuard, Pausable {
     // Maximises yields in e.g. pancakeswap
 
     using SafeMath for uint256;
@@ -1148,7 +1148,7 @@ contract StrategyParrotVaults is Ownable, ReentrancyGuard, Pausable {
     uint256 public constant exitFeeFactorLL = 9950; // 0.5% is the max exit fee settable. LL = lowerlimit
 
     address public goldenPoolAddress;
-    uint256 public goldenPoolFee = 800; 
+    uint256 public goldenPoolFee = 800;
     uint256 public constant goldenPoolMax = 10000;
 
     address[] public earnedToNATIVEPath;
@@ -1177,11 +1177,11 @@ contract StrategyParrotVaults is Ownable, ReentrancyGuard, Pausable {
         uint256 _depositFeeFactor,
         uint256 _exitFeeFactor
     ) public {
-        
+
         govAddress = msg.sender;
-        
+
         feeAddress = 0x45BCAd5e65f7BCEB5C01C087a093db03A8279786;
-        
+
         nativeFarmAddress = _nativeFarmAddress;
         NATIVEAddress = _NATIVEAddress;
 
@@ -1306,7 +1306,7 @@ contract StrategyParrotVaults is Ownable, ReentrancyGuard, Pausable {
         uint256 wantAmt = IERC20(wantAddress).balanceOf(address(this));
         wantLockedTotal = wantLockedTotal.add(wantAmt);
         IERC20(wantAddress).safeIncreaseAllowance(farmContractAddress, wantAmt);
-    
+
         IXswapFarm(farmContractAddress).enterStaking(wantAmt);
     }
 
@@ -1529,14 +1529,14 @@ contract StrategyParrotVaults is Ownable, ReentrancyGuard, Pausable {
                 if (goldenPoolFee > 0) {
                     uint256 fee =
                         _earnedAmt.mul(goldenPoolFee).div(goldenPoolMax);
-                            
+
                     if (earnedAddress != wbnbAddressConstant) {
                         // First convert earn to wbnb
                         IERC20(earnedAddress).safeIncreaseAllowance(
                             uniRouterAddress,
                             fee
                         );
-        
+
                         IXRouter02(uniRouterAddress)
                             .swapExactTokensForTokensSupportingFeeOnTransferTokens(
                             fee,
@@ -1546,7 +1546,7 @@ contract StrategyParrotVaults is Ownable, ReentrancyGuard, Pausable {
                             now + routerDeadlineDuration
                         );
                     }
-                        
+
                     _earnedAmt = _earnedAmt.sub(fee);
                 }
             }
@@ -1645,15 +1645,15 @@ contract StrategyParrotVaults is Ownable, ReentrancyGuard, Pausable {
     function setGov(address _govAddress) public onlyAllowGov {
         govAddress = _govAddress;
     }
-    
+
     function setFeeAddress(address _feeAddress) public onlyAllowGov {
         feeAddress = _feeAddress;
     }
-    
+
     function setGoldenPoolAddress(address _goldenPoolAddress) public onlyAllowGov {
         goldenPoolAddress = _goldenPoolAddress;
     }
-    
+
     function setGoldenPoolFee(uint256 _goldenPoolFee) public onlyAllowGov {
         goldenPoolFee = _goldenPoolFee;
     }

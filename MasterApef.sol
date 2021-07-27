@@ -1416,7 +1416,7 @@ interface IStrategy {
     ) external;
 }
 
-contract MasterLory is Ownable, ReentrancyGuard {
+contract MasterApef is Ownable, ReentrancyGuard {
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
 
@@ -1718,7 +1718,7 @@ contract MasterLory is Ownable, ReentrancyGuard {
         require(_token != NATIVE, "!safe");
         IERC20(_token).safeTransfer(msg.sender, _amount);
     }
-    
+
     function setNATIVEPerBlock(uint256 _NATIVEPerBlock) public onlyOwner {
         NATIVEPerBlock = _NATIVEPerBlock;
     }

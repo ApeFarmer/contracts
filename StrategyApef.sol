@@ -1699,7 +1699,7 @@ contract Pausable is Context {
     }
 }
 
-contract StrategyLory is Ownable, ReentrancyGuard, Pausable {
+contract StrategyApef is Ownable, ReentrancyGuard, Pausable {
     // Strategy used to only stake native tokens
 
     using SafeMath for uint256;

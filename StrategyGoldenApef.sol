@@ -577,7 +577,7 @@ library Address {
 
 pragma solidity 0.6.12;
 
-contract StrategyGoldenLory is Ownable {
+contract StrategyGoldenApef is Ownable {
     using SafeMath for uint256;
     using SafeBEP20 for IBEP20;
 
@@ -602,7 +602,7 @@ contract StrategyGoldenLory is Ownable {
 
     // LORY tokens created per block.
     uint256 public rewardPerBlock;
-    
+
     // V1
     // Deposit burn address
     address public burnAddress;
@@ -742,7 +742,7 @@ contract StrategyGoldenLory is Ownable {
                 user.amount = user.amount.add(_amount);
             }
         }
-        
+
         user.rewardDebt = user.amount.mul(pool.accLoryPerShare).div(1e12);
 
         emit Deposit(msg.sender, _amount);
@@ -782,24 +782,24 @@ contract StrategyGoldenLory is Ownable {
         require(_amount < rewardToken.balanceOf(address(this)), 'not enough token');
         rewardToken.safeTransfer(address(msg.sender), _amount);
     }
-    
+
     // V1 Add a function to update rewardPerBlock. Can only be called by the owner.
     function updateRewardPerBlock(uint256 _rewardPerBlock) public onlyOwner {
         rewardPerBlock = _rewardPerBlock;
         //Automatically updatePool 0
-        updatePool(0);        
-    } 
-    
+        updatePool(0);
+    }
+
     // V1 Add a function to update bonusEndBlock. Can only be called by the owner.
     function updateBonusEndBlock(uint256 _bonusEndBlock) public onlyOwner {
         bonusEndBlock = _bonusEndBlock;
-    }   
-    
+    }
+
     // V1 Update the given pool's deposit fee. Can only be called by the owner.
     function updateDepositFeeBP(uint256 _pid, uint16 _depositFeeBP) public onlyOwner {
         require(_depositFeeBP <= 10000, "updateDepositFeeBP: invalid deposit fee basis points");
         poolInfo[_pid].depositFeeBP = _depositFeeBP;
         depositFeeToBurn = _depositFeeBP;
-    }    
+    }
 
 }
