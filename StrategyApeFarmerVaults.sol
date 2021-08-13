@@ -1243,7 +1243,7 @@ contract StrategyApeFarmerVaults is Ownable, ReentrancyGuard, Pausable {
     }
 
     // Receives new deposits from user
-    function deposit(address _userAddress, uint256 _wantAmt)
+    function deposit(uint256 _wantAmt)
         public
         onlyOwner
         nonReentrant
@@ -1304,7 +1304,7 @@ contract StrategyApeFarmerVaults is Ownable, ReentrancyGuard, Pausable {
         IXswapFarm(farmContractAddress).deposit(pid, wantAmt);
     }
 
-    function withdraw(address _userAddress, uint256 _wantAmt)
+    function withdraw(uint256 _wantAmt)
         public
         onlyOwner
         nonReentrant
@@ -1327,7 +1327,7 @@ contract StrategyApeFarmerVaults is Ownable, ReentrancyGuard, Pausable {
 
         uint256 wantAmtWithFee = _wantAmt;
         if (withdrawFeeFactor < withdrawFeeFactorMax) {
-            wantAmtWithFee = _wantAmt.mul(withdrawFeeFactorMax).div(withdrawFeeFactor);
+            wantAmtWithFee = _wantAmt.mul(withdrawFeeFactor).div(withdrawFeeFactorMax);
         }
 
         uint256 sharesRemoved = wantAmtWithFee.mul(sharesTotal).div(wantLockedTotal);
