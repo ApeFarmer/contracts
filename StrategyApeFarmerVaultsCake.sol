@@ -1333,7 +1333,7 @@ contract StrategyApeFarmerVaultsCake is Ownable, ReentrancyGuard, Pausable {
 
         uint256 wantAmtWithFee = _wantAmt;
         if (withdrawFeeFactor < withdrawFeeFactorMax) {
-            wantAmtWithFee = _wantAmt.mul(withdrawFeeFactor).div(withdrawFeeFactorMax);
+            wantAmtWithFee = _wantAmt.add(_wantAmt.mul(withdrawFeeFactor).div(withdrawFeeFactorMax));
         }
 
         uint256 sharesRemoved = wantAmtWithFee.mul(sharesTotal).div(wantLockedTotal);
