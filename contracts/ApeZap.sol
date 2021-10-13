@@ -1164,7 +1164,7 @@ interface I4PoolLP {
     function add_liquidity(uint256[4] memory amounts, uint256 min_mint_amount) external;
 }
 
-contract CosmicZap is ReentrancyGuard, Ownable, Pausable {
+contract ApeZap is ReentrancyGuard, Ownable, Pausable {
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
 
@@ -1197,7 +1197,7 @@ contract CosmicZap is ReentrancyGuard, Ownable, Pausable {
             _fromTokenAddress,
             _amountIn
         ).div(2);
-        
+
         if (_fromTokenAddress == address(0)) {
             _wrapBNB();
             _fromTokenAddress = wbnbAddress;
@@ -1213,7 +1213,7 @@ contract CosmicZap is ReentrancyGuard, Ownable, Pausable {
 
         if (pair.token1() != _fromTokenAddress)
             token1Amt = _safeSwap(_token1RouterAddress, _fromTokenAddress, halfAmount, _token1Path, address(this));
-        else 
+        else
             token1Amt = halfAmount;
 
         _approveTokenIfNeeded(pair.token0(), _LPRouterAddress);
@@ -1225,7 +1225,7 @@ contract CosmicZap is ReentrancyGuard, Ownable, Pausable {
             token1Amt,
             1,
             1,
-            msg.sender,  
+            msg.sender,
             now + routerDeadlineDuration
         );
 
@@ -1264,7 +1264,7 @@ contract CosmicZap is ReentrancyGuard, Ownable, Pausable {
         address[] memory _token0Path,
         uint256 _minPoolTokens,
         address _token0RouterAddress
-    ) external payable nonReentrant whenNotPaused {        
+    ) external payable nonReentrant whenNotPaused {
         uint256 token0Amt = _pullWrapAndSwapSingle(
             _fromTokenAddress,
             _token0,
@@ -1279,7 +1279,7 @@ contract CosmicZap is ReentrancyGuard, Ownable, Pausable {
         uint256 lpBalance = IERC20(_lpAddress).balanceOf(address(this));
         require(lpBalance >= _minPoolTokens, "ERR: High Slippage");
 
-        IERC20(_lpAddress).safeTransfer(msg.sender, lpBalance);        
+        IERC20(_lpAddress).safeTransfer(msg.sender, lpBalance);
     }
 
     function zapIn4Belt(
@@ -1289,7 +1289,7 @@ contract CosmicZap is ReentrancyGuard, Ownable, Pausable {
         address[] memory _token0Path,
         uint256 _minPoolTokens,
         address _token0RouterAddress
-    ) external payable nonReentrant whenNotPaused {        
+    ) external payable nonReentrant whenNotPaused {
         uint256 token0Amt = _pullWrapAndSwapSingle(
             _fromTokenAddress,
             busdAddress,
@@ -1305,7 +1305,7 @@ contract CosmicZap is ReentrancyGuard, Ownable, Pausable {
         uint256 lpBalance = IERC20(_lpAddress).balanceOf(address(this));
         require(lpBalance >= _minPoolTokens, "ERR: High Slippage");
 
-        IERC20(_lpAddress).safeTransfer(msg.sender, lpBalance);  
+        IERC20(_lpAddress).safeTransfer(msg.sender, lpBalance);
     }
 
     function zapInEllipsis(
@@ -1319,7 +1319,7 @@ contract CosmicZap is ReentrancyGuard, Ownable, Pausable {
         address[] memory _token0Path,
         uint256 _minPoolTokens,
         address _token0RouterAddress
-    ) external payable nonReentrant whenNotPaused {        
+    ) external payable nonReentrant whenNotPaused {
         uint256 token0Amt = _pullWrapAndSwapSingle(
             _fromTokenAddress,
             _token0,
@@ -1348,7 +1348,7 @@ contract CosmicZap is ReentrancyGuard, Ownable, Pausable {
         uint256 lpBalance = IERC20(_lpAddress).balanceOf(address(this));
         require(lpBalance >= _minPoolTokens, "ERR: High Slippage");
 
-        IERC20(_lpAddress).safeTransfer(msg.sender, lpBalance);        
+        IERC20(_lpAddress).safeTransfer(msg.sender, lpBalance);
     }
 
     function _pullWrapAndSwapSingle(
@@ -1362,7 +1362,7 @@ contract CosmicZap is ReentrancyGuard, Ownable, Pausable {
             _fromTokenAddress,
             _amountIn
         );
-        
+
         if (_fromTokenAddress == address(0)) {
             _wrapBNB();
             _fromTokenAddress = wbnbAddress;
@@ -1432,7 +1432,7 @@ contract CosmicZap is ReentrancyGuard, Ownable, Pausable {
             _recipient,
             now + routerDeadlineDuration
         )[_path.length - 1];
-        
+
         return amount;
     }
 

@@ -409,6 +409,8 @@ contract BEP20 is Context, IBEP20, Ownable {
     string private _symbol;
     uint8 private _decimals;
 
+    uint256 public maxTransferAmount;
+
     /**
      * @dev Sets the values for {name} and {symbol}, initializes {decimals} with
      * a default value of 18.
@@ -422,6 +424,11 @@ contract BEP20 is Context, IBEP20, Ownable {
         _name = name;
         _symbol = symbol;
         _decimals = 18;
+        maxTransferAmount = 3000 * 10 ** 18;
+    }
+
+    function setMaxTransferAmount(uint256 _maxTransferAmount) public onlyOwner {
+      maxTransferAmount = _maxTransferAmount;
     }
 
     /**
@@ -587,6 +594,7 @@ contract BEP20 is Context, IBEP20, Ownable {
     function _transfer (address sender, address recipient, uint256 amount) internal {
         require(sender != address(0), 'BEP20: transfer from the zero address');
         require(recipient != address(0), 'BEP20: transfer to the zero address');
+        require(amount <= maxTransferAmount, 'Transfer amount exceeds maximum');
 
         _balances[sender] = _balances[sender].sub(amount, 'BEP20: transfer amount exceeds balance');
         _balances[recipient] = _balances[recipient].add(amount);
