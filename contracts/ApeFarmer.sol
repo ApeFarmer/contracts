@@ -411,6 +411,8 @@ contract BEP20 is Context, IBEP20, Ownable {
 
     uint256 public maxTransferAmount;
 
+    event MaxTransferAmountSet(uint256 amount);
+
     /**
      * @dev Sets the values for {name} and {symbol}, initializes {decimals} with
      * a default value of 18.
@@ -429,6 +431,7 @@ contract BEP20 is Context, IBEP20, Ownable {
 
     function setMaxTransferAmount(uint256 _maxTransferAmount) public onlyOwner {
       maxTransferAmount = _maxTransferAmount;
+      emit MaxTransferAmountSet(_maxTransferAmount);
     }
 
     /**
@@ -677,6 +680,7 @@ pragma solidity 0.6.12;
 
 // LORYToken with Governance.
 contract ApeFarmerToken is BEP20('ApeFarmer Token', 'APEF') {
+
     /// @notice Creates `_amount` token to `_to`. Must only be called by the owner (MasterChef).
     function mint(address _to, uint256 _amount) public onlyOwner {
         _mint(_to, _amount);

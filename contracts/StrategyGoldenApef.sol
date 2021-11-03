@@ -624,6 +624,7 @@ contract StrategyGoldenApef is Ownable {
     event Deposit(address indexed user, uint256 amount);
     event Withdraw(address indexed user, uint256 amount);
     event EmergencyWithdraw(address indexed user, uint256 amount);
+    event BonusEndBlockSet(uint256 bonusEndBlock);
 
     constructor(
         IBEP20 _lory,
@@ -793,6 +794,7 @@ contract StrategyGoldenApef is Ownable {
     // V1 Add a function to update bonusEndBlock. Can only be called by the owner.
     function updateBonusEndBlock(uint256 _bonusEndBlock) public onlyOwner {
         bonusEndBlock = _bonusEndBlock;
+        emit BonusEndBlockSet(_bonusEndBlock);
     }
 
     // V1 Update the given pool's deposit fee. Can only be called by the owner.

@@ -1085,7 +1085,34 @@ interface IXRouter02 is IXRouter01 {
     ) external;
 }
 
-contract StrategyApeFarmerVaults is Ownable, ReentrancyGuard, Pausable {
+interface IStrategy {
+    // Total want tokens managed by strategy
+    function wantLockedTotal() external view returns (uint256);
+
+    // Sum of all shares of users to wantLockedTotal
+    function sharesTotal() external view returns (uint256);
+
+    // Main want token compounding function
+    function earn() external;
+
+    // Transfer want tokens autoFarm -> strategy
+    function deposit(address _userAddress, uint256 _wantAmt)
+        external
+        returns (uint256);
+
+    // Transfer want tokens strategy -> autoFarm
+    function withdraw(address _userAddress, uint256 _wantAmt)
+        external
+        returns (uint256);
+
+    function inCaseTokensGetStuck(
+        address _token,
+        uint256 _amount,
+        address _to
+    ) external;
+}
+
+contract StrategyApeFarmerVaults is Ownable, ReentrancyGuard, Pausable, IStrategy {
     // Maximises yields in e.g. pancakeswap
 
     using SafeMath for uint256;
@@ -1112,8 +1139,8 @@ contract StrategyApeFarmerVaults is Ownable, ReentrancyGuard, Pausable {
     address public feeAddress;
 
     uint256 public lastEarnBlock = 0;
-    uint256 public wantLockedTotal = 0;
-    uint256 public sharesTotal = 0;
+    uint256 public override wantLockedTotal = 0;
+    uint256 public override sharesTotal = 0;
 
     uint256 public controllerFee = 1600;
     uint256 public constant controllerFeeMax = 10000; // 100 = 1%
@@ -1154,6 +1181,14 @@ contract StrategyApeFarmerVaults is Ownable, ReentrancyGuard, Pausable {
     address[] public earnedToWBNBPath;
     address[] public WBNBToNATIVEPath;
     address[] public earnedToWBNBPathConstant;
+
+    event EntranceFeeFactorSet(uint256 entranceFeeFactor);
+    event ControllerFeeSet(uint256 controllerFee);
+    event BuyBackRateSet(uint256 buyBackRate);
+    event ExitFeeFactorSet(uint256 exitFeeFactor);
+    event WithdrawFeeFactorSet(uint256 withdrawFeeFactor);
+    event DepositFeeFactorSet(uint256 depositFeeFactor);
+
 
     constructor(
         address _nativeFarmAddress,
@@ -1243,11 +1278,12 @@ contract StrategyApeFarmerVaults is Ownable, ReentrancyGuard, Pausable {
     }
 
     // Receives new deposits from user
-    function deposit(uint256 _wantAmt)
+    function deposit(address _userAddress, uint256 _wantAmt)
         public
         onlyOwner
         nonReentrant
         whenNotPaused
+        override
         returns (uint256)
     {
         IERC20(wantAddress).safeTransferFrom(
@@ -1304,10 +1340,11 @@ contract StrategyApeFarmerVaults is Ownable, ReentrancyGuard, Pausable {
         IXswapFarm(farmContractAddress).deposit(pid, wantAmt);
     }
 
-    function withdraw(uint256 _wantAmt)
+    function withdraw(address _userAddress, uint256 _wantAmt)
         public
         onlyOwner
         nonReentrant
+        override
         returns (uint256)
     {
         require(_wantAmt > 0, "_wantAmt <= 0");
@@ -1352,7 +1389,7 @@ contract StrategyApeFarmerVaults is Ownable, ReentrancyGuard, Pausable {
     // 2. Converts farm tokens into want tokens
     // 3. Deposits want tokens
 
-    function earn() public nonReentrant whenNotPaused {
+    function earn() public nonReentrant whenNotPaused override {
         require(isAutoComp, "!isAutoComp");
 
         // Harvest farm tokens
@@ -1606,34 +1643,40 @@ contract StrategyApeFarmerVaults is Ownable, ReentrancyGuard, Pausable {
         require(_entranceFeeFactor > entranceFeeFactorLL, "!safe - too low");
         require(_entranceFeeFactor <= entranceFeeFactorMax, "!safe - too high");
         entranceFeeFactor = _entranceFeeFactor;
+        emit EntranceFeeFactorSet(_entranceFeeFactor);
     }
 
     function setExitFeeFactor(uint256 _exitFeeFactor) public onlyAllowGov{
         require(_exitFeeFactor > exitFeeFactorLL, "!safe - too low");
         require(_exitFeeFactor <= exitFeeFactorMax, "!safe - too high");
         exitFeeFactor = _exitFeeFactor;
+        emit ExitFeeFactorSet(_exitFeeFactor);
     }
 
     function setControllerFee(uint256 _controllerFee) public onlyAllowGov{
         require(_controllerFee <= controllerFeeUL, "too high");
         controllerFee = _controllerFee;
+        emit ControllerFeeSet(_controllerFee);
     }
 
     function setDepositFeeFactor(uint256 _depositFeeFactor) public onlyAllowGov{
         require(_depositFeeFactor > depositFeeFactorLL, "!safe - too low");
         require(_depositFeeFactor <= depositFeeFactorMax, "!safe - too high");
         depositFeeFactor = _depositFeeFactor;
+        emit DepositFeeFactorSet(_depositFeeFactor);
     }
 
     function setWithdrawFeeFactor(uint256 _withdrawFeeFactor) public onlyAllowGov {
         require(_withdrawFeeFactor > withdrawFeeFactorLL, "!safe - too low");
         require(_withdrawFeeFactor <= withdrawFeeFactorMax, "!safe - too high");
         withdrawFeeFactor = _withdrawFeeFactor;
+        emit WithdrawFeeFactorSet(_withdrawFeeFactor);
     }
 
     function setbuyBackRate(uint256 _buyBackRate) public onlyAllowGov {
         require(buyBackRate <= buyBackRateUL, "too high");
         buyBackRate = _buyBackRate;
+        emit BuyBackRateSet(_buyBackRate);
     }
 
     function setGov(address _govAddress) public onlyAllowGov {
@@ -1660,7 +1703,7 @@ contract StrategyApeFarmerVaults is Ownable, ReentrancyGuard, Pausable {
         address _token,
         uint256 _amount,
         address _to
-    ) public onlyAllowGov {
+    ) public onlyAllowGov override {
         require(_token != earnedAddress, "!safe");
         require(_token != wantAddress, "!safe");
         IERC20(_token).safeTransfer(_to, _amount);

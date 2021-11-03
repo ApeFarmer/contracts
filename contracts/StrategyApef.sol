@@ -1699,7 +1699,34 @@ contract Pausable is Context {
     }
 }
 
-contract StrategyApef is Ownable, ReentrancyGuard, Pausable {
+interface IStrategy {
+    // Total want tokens managed by strategy
+    function wantLockedTotal() external view returns (uint256);
+
+    // Sum of all shares of users to wantLockedTotal
+    function sharesTotal() external view returns (uint256);
+
+    // Main want token compounding function
+    function earn() external;
+
+    // Transfer want tokens autoFarm -> strategy
+    function deposit(address _userAddress, uint256 _wantAmt)
+        external
+        returns (uint256);
+
+    // Transfer want tokens strategy -> autoFarm
+    function withdraw(address _userAddress, uint256 _wantAmt)
+        external
+        returns (uint256);
+
+    function inCaseTokensGetStuck(
+        address _token,
+        uint256 _amount,
+        address _to
+    ) external;
+}
+
+contract StrategyApef is Ownable, ReentrancyGuard, Pausable, IStrategy {
     // Strategy used to only stake native tokens
 
     using SafeMath for uint256;
@@ -1723,8 +1750,8 @@ contract StrategyApef is Ownable, ReentrancyGuard, Pausable {
     bool public onlyGov = true;
 
     uint256 public lastEarnBlock = 0;
-    uint256 public wantLockedTotal = 0;
-    uint256 public sharesTotal = 0;
+    uint256 public override wantLockedTotal = 0;
+    uint256 public override sharesTotal = 0;
 
     uint256 public controllerFee = 0;
     uint256 public constant controllerFeeMax = 10000; // 100 = 1%
@@ -1747,6 +1774,10 @@ contract StrategyApef is Ownable, ReentrancyGuard, Pausable {
     address[] public earnedToToken1Path; // not used
     address[] public token0ToEarnedPath; // not used
     address[] public token1ToEarnedPath; // not used
+
+    event EntranceFeeFactorSet(uint256 entranceFeeFactor);
+    event ControllerFeeSet(uint256 controllerFee);
+    event BuyBackRateSet(uint256 buyBackRate);
 
     constructor(
         address _nativeFarmAddress,
@@ -1783,6 +1814,7 @@ contract StrategyApef is Ownable, ReentrancyGuard, Pausable {
         public
         onlyOwner
         whenNotPaused
+        override
         returns (uint256)
     {
         IERC20(wantAddress).safeTransferFrom(
@@ -1829,6 +1861,7 @@ contract StrategyApef is Ownable, ReentrancyGuard, Pausable {
         public
         onlyOwner
         nonReentrant
+        override
         returns (uint256)
     {
         require(_wantAmt > 0, "_wantAmt <= 0");
@@ -1855,7 +1888,7 @@ contract StrategyApef is Ownable, ReentrancyGuard, Pausable {
     }
 
     // not used
-    function earn() public whenNotPaused {}
+    function earn() public whenNotPaused override {}
     // not used
     function buyBack(uint256 _earnedAmt) internal returns (uint256) {}
     // not used
@@ -1878,18 +1911,21 @@ contract StrategyApef is Ownable, ReentrancyGuard, Pausable {
         require(_entranceFeeFactor > entranceFeeFactorLL, "!safe - too low");
         require(_entranceFeeFactor <= entranceFeeFactorMax, "!safe - too high");
         entranceFeeFactor = _entranceFeeFactor;
+        emit EntranceFeeFactorSet(_entranceFeeFactor);
     }
 
     function setControllerFee(uint256 _controllerFee) public {
         require(msg.sender == govAddress, "Not authorised");
         require(_controllerFee <= controllerFeeUL, "too high");
         controllerFee = _controllerFee;
+        emit ControllerFeeSet(_controllerFee);
     }
 
     function setbuyBackRate(uint256 _buyBackRate) public {
         require(msg.sender == govAddress, "Not authorised");
         require(buyBackRate <= buyBackRateUL, "too high");
         buyBackRate = _buyBackRate;
+        emit BuyBackRateSet(_buyBackRate);
     }
 
     function setGov(address _govAddress) public {
@@ -1906,7 +1942,7 @@ contract StrategyApef is Ownable, ReentrancyGuard, Pausable {
         address _token,
         uint256 _amount,
         address _to
-    ) public {
+    ) public override {
         require(msg.sender == govAddress, "!gov");
         require(_token != earnedAddress, "!safe");
         require(_token != wantAddress, "!safe");

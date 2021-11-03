@@ -1073,8 +1073,34 @@ interface IBeltMultiStrategyToken {
     function deposit(uint256 _amount, uint256 _minShares) external;
 }
 
+interface IStrategy {
+    // Total want tokens managed by strategy
+    function wantLockedTotal() external view returns (uint256);
 
-contract StrategyBelt_Token is Ownable, ReentrancyGuard, Pausable {
+    // Sum of all shares of users to wantLockedTotal
+    function sharesTotal() external view returns (uint256);
+
+    // Main want token compounding function
+    function earn() external;
+
+    // Transfer want tokens autoFarm -> strategy
+    function deposit(address _userAddress, uint256 _wantAmt)
+        external
+        returns (uint256);
+
+    // Transfer want tokens strategy -> autoFarm
+    function withdraw(address _userAddress, uint256 _wantAmt)
+        external
+        returns (uint256);
+
+    function inCaseTokensGetStuck(
+        address _token,
+        uint256 _amount,
+        address _to
+    ) external;
+}
+
+contract StrategyBelt_Token is Ownable, ReentrancyGuard, Pausable, IStrategy {
     // Maximises yields in e.g. pancakeswap
 
     using SafeMath for uint256;
@@ -1082,7 +1108,7 @@ contract StrategyBelt_Token is Ownable, ReentrancyGuard, Pausable {
 
     address public farmContractAddress; // address of farm, eg, PCS, Thugs etc.
     uint256 public pid; // pid of pool in farmContractAddress
-    address public wantAddress;    // 4BELT, VENUS BLP, 
+    address public wantAddress;    // 4BELT, VENUS BLP,
     address public wantOrigAddress;
     address public earnedAddress;
     address public uniRouterAddress; // uniswap, pancakeswap etc
@@ -1097,8 +1123,8 @@ contract StrategyBelt_Token is Ownable, ReentrancyGuard, Pausable {
     address public feeAddress;
 
     uint256 public lastEarnBlock = 0;
-    uint256 public wantLockedTotal = 0;
-    uint256 public sharesTotal = 0;
+    uint256 public override wantLockedTotal = 0;
+    uint256 public override sharesTotal = 0;
 
     uint256 public controllerFee = 1600;
     uint256 public constant controllerFeeMax = 10000; // 100 = 1%
@@ -1127,7 +1153,7 @@ contract StrategyBelt_Token is Ownable, ReentrancyGuard, Pausable {
     uint256 public constant exitFeeFactorLL = 9950; // 0.5% is the max exit fee settable. LL = lowerlimit
 
     address public goldenPoolAddress;
-    uint256 public goldenPoolFee = 800; 
+    uint256 public goldenPoolFee = 800;
     uint256 public constant goldenPoolMax = 10000;
 
     uint256 public slippageFactor = 950; // 5% default slippage tolerance
@@ -1138,6 +1164,13 @@ contract StrategyBelt_Token is Ownable, ReentrancyGuard, Pausable {
     address[] public earnedToWBNBPath;
     address[] public WBNBToNATIVEPath;
     address[] public earnedToWBNBPathConstant;
+
+    event EntranceFeeFactorSet(uint256 entranceFeeFactor);
+    event ControllerFeeSet(uint256 controllerFee);
+    event BuyBackRateSet(uint256 buyBackRate);
+    event ExitFeeFactorSet(uint256 exitFeeFactor);
+    event WithdrawFeeFactorSet(uint256 withdrawFeeFactor);
+    event DepositFeeFactorSet(uint256 depositFeeFactor);
 
     constructor(
         address _nativeFarmAddress,
@@ -1152,12 +1185,12 @@ contract StrategyBelt_Token is Ownable, ReentrancyGuard, Pausable {
         uint256 _depositFeeFactor,
         uint256 _exitFeeFactor
     ) public {
-        
+
         govAddress = msg.sender;
-        
+
         feeAddress = 0x45BCAd5e65f7BCEB5C01C087a093db03A8279786;
         buyBackAddress = feeAddress;
-        
+
         nativeFarmAddress = _nativeFarmAddress;
         NATIVEAddress = _NATIVEAddress;
 
@@ -1202,6 +1235,7 @@ contract StrategyBelt_Token is Ownable, ReentrancyGuard, Pausable {
         onlyOwner
         nonReentrant
         whenNotPaused
+        override
         returns (uint256)
     {
         IERC20(wantAddress).safeTransferFrom(
@@ -1266,6 +1300,7 @@ contract StrategyBelt_Token is Ownable, ReentrancyGuard, Pausable {
         public
         onlyOwner
         nonReentrant
+        override
         returns (uint256)
     {
         require(_wantAmt > 0, "_wantAmt <= 0");
@@ -1308,7 +1343,7 @@ contract StrategyBelt_Token is Ownable, ReentrancyGuard, Pausable {
     // 2. Converts farm tokens into want tokens
     // 3. Deposits want tokens
 
-    function earn() public nonReentrant whenNotPaused {
+    function earn() public nonReentrant whenNotPaused override {
 
         // Harvest farm tokens
         IMasterBelt(farmContractAddress).withdraw(pid, 0);
@@ -1420,14 +1455,14 @@ contract StrategyBelt_Token is Ownable, ReentrancyGuard, Pausable {
                 if (goldenPoolFee > 0) {
                     uint256 fee =
                         _earnedAmt.mul(goldenPoolFee).div(goldenPoolMax);
-                            
+
                     if (earnedAddress != wbnbAddressConstant) {
                         // First convert earn to wbnb
                         IERC20(earnedAddress).safeIncreaseAllowance(
                             uniRouterAddress,
                             fee
                         );
-        
+
                         IXRouter02(uniRouterAddress)
                             .swapExactTokensForTokensSupportingFeeOnTransferTokens(
                             fee,
@@ -1437,7 +1472,7 @@ contract StrategyBelt_Token is Ownable, ReentrancyGuard, Pausable {
                             now + routerDeadlineDuration
                         );
                     }
-                        
+
                     _earnedAmt = _earnedAmt.sub(fee);
                 }
             }
@@ -1460,48 +1495,54 @@ contract StrategyBelt_Token is Ownable, ReentrancyGuard, Pausable {
         require(_entranceFeeFactor > entranceFeeFactorLL, "!safe - too low");
         require(_entranceFeeFactor <= entranceFeeFactorMax, "!safe - too high");
         entranceFeeFactor = _entranceFeeFactor;
+        emit EntranceFeeFactorSet(_entranceFeeFactor);
     }
 
     function setExitFeeFactor(uint256 _exitFeeFactor) public onlyAllowGov{
         require(_exitFeeFactor > exitFeeFactorLL, "!safe - too low");
         require(_exitFeeFactor <= exitFeeFactorMax, "!safe - too high");
         exitFeeFactor = _exitFeeFactor;
+        emit ExitFeeFactorSet(_exitFeeFactor);
     }
 
     function setControllerFee(uint256 _controllerFee) public onlyAllowGov{
         require(_controllerFee <= controllerFeeUL, "too high");
         controllerFee = _controllerFee;
+        emit ControllerFeeSet(_controllerFee);
     }
 
     function setDepositFeeFactor(uint256 _depositFeeFactor) public onlyAllowGov{
         require(_depositFeeFactor > depositFeeFactorLL, "!safe - too low");
         require(_depositFeeFactor <= depositFeeFactorMax, "!safe - too high");
         depositFeeFactor = _depositFeeFactor;
+        emit DepositFeeFactorSet(_depositFeeFactor);
     }
 
     function setWithdrawFeeFactor(uint256 _withdrawFeeFactor) public onlyAllowGov {
         require(_withdrawFeeFactor > withdrawFeeFactorLL, "!safe - too low");
         require(_withdrawFeeFactor <= withdrawFeeFactorMax, "!safe - too high");
         withdrawFeeFactor = _withdrawFeeFactor;
+        emit WithdrawFeeFactorSet(_withdrawFeeFactor);
     }
 
     function setbuyBackRate(uint256 _buyBackRate) public onlyAllowGov {
         require(buyBackRate <= buyBackRateUL, "too high");
         buyBackRate = _buyBackRate;
+        emit BuyBackRateSet(_buyBackRate);
     }
-    
+
     function setBuybackAddress(address _buyBackAddress) public onlyAllowGov {
         buyBackAddress = _buyBackAddress;
     }
-    
+
     function setFeeAddress(address _feeAddress) public onlyAllowGov {
         feeAddress = _feeAddress;
     }
-    
+
     function setGoldenPoolAddress(address _goldenPoolAddress) public onlyAllowGov {
         goldenPoolAddress = _goldenPoolAddress;
     }
-    
+
     function setGoldenPoolFee(uint256 _goldenPoolFee) public onlyAllowGov {
         goldenPoolFee = _goldenPoolFee;
     }
@@ -1540,7 +1581,7 @@ contract StrategyBelt_Token is Ownable, ReentrancyGuard, Pausable {
         address _token,
         uint256 _amount,
         address _to
-    ) public onlyAllowGov {
+    ) public onlyAllowGov override {
         require(_token != earnedAddress, "!safe");
         require(_token != wantAddress, "!safe");
         IERC20(_token).safeTransfer(_to, _amount);

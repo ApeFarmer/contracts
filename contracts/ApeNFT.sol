@@ -5,13 +5,13 @@ import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
 contract ApeNFT is ERC1155, AccessControl, Ownable {
-    bytes32 public constant ROLE_ADMIN = keccak256("ROLE_ADMIN");
+    bytes32 public constant ROLE_MINTER = keccak256("ROLE_MINTER");
     uint256 public nextTokenId;
     uint256 public totalSupply;
     mapping(uint256 => string) tokenURIs;
 
-    modifier onlyAdmin {
-        require(hasRole(ROLE_ADMIN, msg.sender), "Sender is not admin");
+    modifier onlyMinter {
+        require(hasRole(ROLE_MINTER, msg.sender), "Sender is not minter");
         _;
     }
 
@@ -22,9 +22,9 @@ contract ApeNFT is ERC1155, AccessControl, Ownable {
      * Params:
      * _admin: address of the first admin
      */
-    constructor(address _admin) ERC1155("") {
-        _setupRole(ROLE_ADMIN, _admin);
-        _setRoleAdmin(ROLE_ADMIN, ROLE_ADMIN);
+    constructor(address _minter) ERC1155("") {
+      _setupRole(ROLE_MINTER, _minter);
+      _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
     }
 
     function supportsInterface(bytes4 interfaceId)
@@ -57,7 +57,7 @@ contract ApeNFT is ERC1155, AccessControl, Ownable {
         uint256 amount,
         bytes memory data,
         string memory URI
-    ) external onlyAdmin {
+    ) external onlyMinter {
         uint256 tokenId = generateTokenId();
         tokenURIs[tokenId] = URI;
         _mint(recipient, tokenId, amount, data);
@@ -69,7 +69,7 @@ contract ApeNFT is ERC1155, AccessControl, Ownable {
         uint256[] memory amounts,
         bytes memory data,
         string[] memory URIs
-    ) public {
+    ) external onlyMinter {
         uint256[] memory tokenIds = new uint256[](amounts.length);
         for (uint256 j = 0; j < amounts.length; j++) {
             uint256 tokenId = generateTokenId();
