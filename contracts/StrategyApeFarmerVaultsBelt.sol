@@ -1330,11 +1330,11 @@ contract StrategyBelt_Token is Ownable, ReentrancyGuard, Pausable, IStrategy {
 
         if (exitFeeFactor < exitFeeFactorMax) {
             uint256 wantAmountOriginal = _wantAmt;
-            _wantAmt = _wantAmt.mul(exitFeeFactor).div(exitFeeFactorMax);
-            IERC20(wantAddress).safeTransfer(feeAddress, wantAmountOriginal.sub(_wantAmt));
+            wantAmtWithFee = wantAmtWithFee.mul(exitFeeFactor).div(exitFeeFactorMax);
+            IERC20(wantAddress).safeTransfer(feeAddress, wantAmountOriginal.sub(wantAmtWithFee));
         }
 
-        IERC20(wantAddress).safeTransfer(nativeFarmAddress, _wantAmt);
+        IERC20(wantAddress).safeTransfer(nativeFarmAddress, wantAmtWithFee);
 
         return sharesRemoved;
     }
