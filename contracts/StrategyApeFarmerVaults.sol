@@ -1375,7 +1375,7 @@ contract StrategyApeFarmerVaults is Ownable, ReentrancyGuard, Pausable, IStrateg
         wantLockedTotal = wantLockedTotal.sub(_wantAmt);
 
         if (exitFeeFactor < exitFeeFactorMax) {
-            uint256 wantAmountOriginal = _wantAmt;
+            uint256 wantAmountOriginal = wantAmtWithFee;
             wantAmtWithFee = wantAmtWithFee.mul(exitFeeFactor).div(exitFeeFactorMax);
             IERC20(wantAddress).safeTransfer(feeAddress, wantAmountOriginal.sub(wantAmtWithFee));
         }
